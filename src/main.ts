@@ -1,5 +1,5 @@
-const CANVAS_WIDTH = 600;
-const CANVAS_HEIGHT = 400;
+const CANVAS_WIDTH = 400;
+const CANVAS_HEIGHT = 200;
 
 const PLATFORM_WIDTH = 100;
 const PLATFORM_HEIGHT = 10;
@@ -21,25 +21,38 @@ type Platform = {
   y: number;
   w: number;
   h: number;
-  speed: number;
-  color: Hex;
+  s: number;
+  c: Hex;
 };
-
-enum Direction {
-  LEFT = 0,
-  RIGHT
-}
 
 const p: Platform = {
   x: CANVAS_WIDTH / 2 - PLATFORM_WIDTH / 2,
   y: CANVAS_HEIGHT - PLATFORM_HEIGHT * 2,
   w: 100,
   h: 10,
-  speed: 200,
-  color: "#000"
+  s: 200,
+  c: "#000"
 };
 
-let d: Direction = Direction.RIGHT;
+type Ball = {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  sx: number;
+  sy: number;
+  c: Hex;
+};
+
+const b: Ball = {
+  x: CANVAS_WIDTH / 2 - 10,
+  y: 10,
+  w: 10,
+  h: 10,
+  sx: 100,
+  sy: 100,
+  c: "#f00"
+};
 
 let prevTimestamp = 0;
 function gameLoop(timestamp: number) {
@@ -49,15 +62,36 @@ function gameLoop(timestamp: number) {
 
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-  ctx.fillStyle = p.color;
+  ctx.fillStyle = p.c;
   ctx.fillRect(p.x, p.y, p.w, p.h);
 
-  if (d === Direction.RIGHT) {
-    p.x += p.speed * dt;
-    if (p.x + p.w >= CANVAS_WIDTH) d = Direction.LEFT;
-  } else {
-    p.x -= p.speed * dt;
-    if (p.x <= 0) d = Direction.RIGHT;
+  ctx.fillStyle = b.c;
+  ctx.fillRect(b.x, b.y, b.w, b.h);
+
+  p.x += p.s * dt;
+
+  if (p.x + p.w > CANVAS_WIDTH) {
+    p.x = CANVAS_WIDTH - p.w;
+  } else if (p.x < 0) {
+    p.x = 0;
+  }
+
+  b.x += b.sx * dt;
+  b.y += b.sy * dt;
+
+  if (b.x + b.w >= CANVAS_WIDTH || b.x <= 0) {
+    b.sx *= -1;
+  }
+
+  if (b.y >= CANVAS_HEIGHT - b.h || b.y <= 0) {
+    b.sy *= -1;
+  }
+
+  const coll_x = b.x + b.w >= p.x && p.x + p.w >= b.x;
+  const coll_y = b.y + b.h >= p.y && p.y + p.h >= b.y;
+
+  if (coll_x && coll_y) {
+    b.sy *= -1;
   }
 
   requestAnimationFrame(gameLoop);
@@ -69,12 +103,16 @@ document.addEventListener("keydown", (e: KeyboardEvent) => {
   switch (e.code) {
     case "KeyD":
     case "ArrowRight":
-      d = Direction.RIGHT;
+      if (p.s < 0) {
+        p.s *= -1;
+      }
       break;
 
     case "KeyA":
     case "ArrowLeft":
-      d = Direction.LEFT;
+      if (p.s > 0) {
+        p.s *= -1;
+      }
       break;
 
     default: break;
