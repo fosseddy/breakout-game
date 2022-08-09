@@ -31,12 +31,50 @@ type Bullet = {
   color: string;
 }
 
+type Target = {
+  pos: Vec2;
+  size: Vec2;
+  color: string;
+  killed: boolean;
+}
+
 function vec2(x: number, y: number): Vec2 {
   return { x, y };
 }
 
 function overlaps(a: Vec2, b: Vec2): boolean {
   return a.x + a.y > b.x && b.x + b.y > a.x;
+}
+
+function createTargets(): Target[] {
+  let result: Target[] = [];
+
+  const colors = ["steelblue", "green", "yellow", "pink", "coral", "lavender", "plum"];
+
+  const size = vec2(40, 20);
+  const pad = 5;
+
+  let x = size.x + pad * 2;
+  let y = 5;
+
+  let rows = Math.floor(GAME_WIDTH / (size.x + pad * 2)) - 2;
+
+  for (let i = 0; i <= rows; i++) {
+    const t: Target = {
+      pos: vec2(x, y),
+      color: colors.at(Math.floor(Math.random() * colors.length))!,
+      killed: false,
+      size
+    };
+
+    console.assert(t.color != undefined, "Generated index is out of range");
+
+    result.push(t);
+
+    x += size.x + 5;
+  }
+
+  return result;
 }
 
 const bar: Bar = {
@@ -50,6 +88,9 @@ const bullet: Bullet = {
   size: vec2(10, 10),
   color: "#f00"
 };
+
+const targets: Target[] = createTargets();
+console.log(targets);
 
 let left = false;
 let right = false;
@@ -105,6 +146,12 @@ function gameLoop(timestamp: number) {
 
   {
     const { pos, size, color } = bullet;
+    ctx.fillStyle = color;
+    ctx.fillRect(pos.x, pos.y, size.x, size.y);
+  }
+
+  for (const t of targets) {
+    const { pos, size, color } = t;
     ctx.fillStyle = color;
     ctx.fillRect(pos.x, pos.y, size.x, size.y);
   }
