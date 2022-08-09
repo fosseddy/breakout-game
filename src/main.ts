@@ -1,5 +1,5 @@
-const GAME_WIDTH = 400;
-const GAME_HEIGHT = 200;
+const GAME_WIDTH = 500;
+const GAME_HEIGHT = 300;
 
 const BAR_WIDTH = 100;
 const BAR_HEIGHT = 10;
@@ -19,14 +19,6 @@ type Vec2 = {
   y: number;
 }
 
-function vec2(x: number, y: number): Vec2 {
-  return { x, y };
-}
-
-function overlaps(a: Vec2, b: Vec2): boolean {
-  return a.x + a.y > b.x && b.x + b.y > a.x;
-}
-
 type Bar = {
   pos: Vec2;
   size: Vec2;
@@ -37,6 +29,14 @@ type Bullet = {
   pos: Vec2;
   size: Vec2;
   color: string;
+}
+
+function vec2(x: number, y: number): Vec2 {
+  return { x, y };
+}
+
+function overlaps(a: Vec2, b: Vec2): boolean {
+  return a.x + a.y > b.x && b.x + b.y > a.x;
 }
 
 const bar: Bar = {
@@ -53,7 +53,6 @@ const bullet: Bullet = {
 
 let left = false;
 let right = false;
-let gameStarted = false;
 let bar_dx = 0;
 let bullet_dx = 1;
 let bullet_dy = -1;
@@ -79,28 +78,23 @@ function gameLoop(timestamp: number) {
     bar.pos.x = 0;
   }
 
-  if (gameStarted) {
-    if (bullet.pos.x + bullet.size.x > GAME_WIDTH || bullet.pos.x < 0) {
-      bullet_dx *= -1;
-    }
-
-    if (bullet.pos.y < 0 || bullet.pos.y + bullet.size.y > GAME_HEIGHT) {
-      bullet_dy *= -1;
-    }
-
-
-    const a_x = vec2(bullet.pos.x, bullet.size.x);
-    const a_y = vec2(bullet.pos.y, bullet.size.y);
-    const b_x = vec2(bar.pos.x, bar.size.x);
-    const b_y = vec2(bar.pos.y, bar.size.y);
-
-    if (overlaps(a_x, b_x) && overlaps(a_y, b_y)) bullet_dy *= -1;
-
-    bullet.pos.x += bullet_dx * 150 * dt;
-    bullet.pos.y += bullet_dy * 150 * dt;
-  } else {
-    bullet.pos.x += 250 * bar_dx * dt;
+  if (bullet.pos.x + bullet.size.x > GAME_WIDTH || bullet.pos.x < 0) {
+    bullet_dx *= -1;
   }
+
+  if (bullet.pos.y < 0 || bullet.pos.y + bullet.size.y > GAME_HEIGHT) {
+    bullet_dy *= -1;
+  }
+
+  const a_x = vec2(bullet.pos.x, bullet.size.x);
+  const a_y = vec2(bullet.pos.y, bullet.size.y);
+  const b_x = vec2(bar.pos.x, bar.size.x);
+  const b_y = vec2(bar.pos.y, bar.size.y);
+
+  if (overlaps(a_x, b_x) && overlaps(a_y, b_y)) bullet_dy *= -1;
+
+  bullet.pos.x += bullet_dx * 180 * dt;
+  bullet.pos.y += bullet_dy * 180 * dt;
 
   // Draw
   {
@@ -133,7 +127,6 @@ document.addEventListener("keydown", (e: KeyboardEvent) => {
       break;
 
     case "Space":
-      gameStarted = true;
       break;
 
     default: break;
