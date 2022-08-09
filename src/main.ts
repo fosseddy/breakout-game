@@ -1,7 +1,7 @@
 const GAME_WIDTH = 500;
 const GAME_HEIGHT = 300;
 
-const BAR_WIDTH = 100;
+const BAR_WIDTH = 60;
 const BAR_HEIGHT = 10;
 
 const canvas = document.querySelector<HTMLCanvasElement>("#canvas")!;
@@ -17,6 +17,11 @@ console.assert(ctx != null, "2d context is not supported");
 type Vec2 = {
   x: number;
   y: number;
+}
+
+type Rect = {
+  pos: Vec2;
+  size: Vec2;
 }
 
 type Bar = {
@@ -35,15 +40,18 @@ type Target = {
   pos: Vec2;
   size: Vec2;
   color: string;
-  killed: boolean;
+  alive: boolean;
 }
 
 function vec2(x: number, y: number): Vec2 {
   return { x, y };
 }
 
-function overlaps(a: Vec2, b: Vec2): boolean {
-  return a.x + a.y > b.x && b.x + b.y > a.x;
+function overlaps(a: Rect, b: Rect): boolean {
+  return a.pos.x + a.size.x > b.pos.x &&
+         b.pos.x + b.size.x > a.pos.x &&
+         a.pos.y + a.size.y > b.pos.y &&
+         b.pos.y + b.size.y > a.pos.y;
 }
 
 function createTargets(): Target[] {
@@ -51,7 +59,7 @@ function createTargets(): Target[] {
 
   const colors = ["steelblue", "green", "yellow", "pink", "coral", "lavender", "plum"];
 
-  const size = vec2(40, 20);
+  const size = vec2(40, 10);
   const pad = 5;
 
   let x = size.x + pad * 2;
@@ -63,7 +71,47 @@ function createTargets(): Target[] {
     const t: Target = {
       pos: vec2(x, y),
       color: colors.at(Math.floor(Math.random() * colors.length))!,
-      killed: false,
+      alive: true,
+      size
+    };
+
+    console.assert(t.color != undefined, "Generated index is out of range");
+
+    result.push(t);
+
+    x += size.x + 5;
+  }
+
+  x = pad;
+  y = 5 + size.y + pad;
+
+  rows = Math.floor(GAME_WIDTH / (size.x + pad * 2));
+
+  for (let i = 0; i <= rows; i++) {
+    const t: Target = {
+      pos: vec2(x, y),
+      color: colors.at(Math.floor(Math.random() * colors.length))!,
+      alive: true,
+      size
+    };
+
+    console.assert(t.color != undefined, "Generated index is out of range");
+
+    result.push(t);
+
+    x += size.x + 5;
+  }
+
+  x = size.x + pad * 2;
+  y = 5 + size.y * 2 + pad * 2;
+
+  rows = Math.floor(GAME_WIDTH / (size.x + pad * 2)) - 2;
+
+  for (let i = 0; i <= rows; i++) {
+    const t: Target = {
+      pos: vec2(x, y),
+      color: colors.at(Math.floor(Math.random() * colors.length))!,
+      alive: true,
       size
     };
 
@@ -90,7 +138,6 @@ const bullet: Bullet = {
 };
 
 const targets: Target[] = createTargets();
-console.log(targets);
 
 let left = false;
 let right = false;
@@ -127,15 +174,24 @@ function gameLoop(timestamp: number) {
     bullet_dy *= -1;
   }
 
-  const a_x = vec2(bullet.pos.x, bullet.size.x);
-  const a_y = vec2(bullet.pos.y, bullet.size.y);
-  const b_x = vec2(bar.pos.x, bar.size.x);
-  const b_y = vec2(bar.pos.y, bar.size.y);
-
-  if (overlaps(a_x, b_x) && overlaps(a_y, b_y)) bullet_dy *= -1;
+  if (overlaps(bullet, bar)) {
+    bullet_dy *= -1;
+    if (bar_dx !== 0) {
+      bullet_dx = bar_dx;
+    }
+  }
 
   bullet.pos.x += bullet_dx * 180 * dt;
   bullet.pos.y += bullet_dy * 180 * dt;
+
+  for (const t of targets) {
+    if (t.alive) {
+      if (overlaps(bullet, t)) {
+        t.alive = false;
+        bullet_dy *= -1;
+      }
+    }
+  }
 
   // Draw
   {
@@ -151,9 +207,11 @@ function gameLoop(timestamp: number) {
   }
 
   for (const t of targets) {
-    const { pos, size, color } = t;
-    ctx.fillStyle = color;
-    ctx.fillRect(pos.x, pos.y, size.x, size.y);
+    if (t.alive) {
+      const { pos, size, color } = t;
+      ctx.fillStyle = color;
+      ctx.fillRect(pos.x, pos.y, size.x, size.y);
+    }
   }
 
   requestAnimationFrame(gameLoop);
