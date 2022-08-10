@@ -1,8 +1,21 @@
-const GAME_WIDTH = 500;
-const GAME_HEIGHT = 300;
+const GAME_WIDTH = 410;
+const GAME_HEIGHT = 230;
 
 const BAR_WIDTH = 60;
 const BAR_HEIGHT = 10;
+const BAR_SPEED = 250;
+
+const BULLET_SPEED = 200;
+
+const TARGET_COLORS = [
+  "steelblue",
+  "green",
+  "yellow",
+  "pink",
+  "coral",
+  "lavender",
+  "plum"
+];
 
 const canvas = document.querySelector<HTMLCanvasElement>("#canvas")!;
 console.assert(canvas != null, "Canvas was not found in DOM");
@@ -55,78 +68,43 @@ function overlaps(a: Rect, b: Rect): boolean {
 }
 
 function createTargets(): Target[] {
-  let result: Target[] = [];
-
-  const colors = ["steelblue", "green", "yellow", "pink", "coral", "lavender", "plum"];
+  const result: Target[] = [];
 
   const size = vec2(40, 10);
-  const pad = 5;
+  const xpad = 10;
+  const ypad = 10;
 
-  let x = size.x + pad * 2;
-  let y = 5;
+  const rows = 4;
+  const cols = Math.floor((GAME_WIDTH - xpad) / (size.x + xpad));
+  console.log(cols);
 
-  let rows = Math.floor(GAME_WIDTH / (size.x + pad * 2)) - 2;
+  let x = xpad;
+  let y = ypad;
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      const colorIndex = Math.floor(Math.random() * TARGET_COLORS.length);
+      const color = TARGET_COLORS[colorIndex]!;
+      console.assert(color != undefined, "Generated index is out of range");
 
-  for (let i = 0; i <= rows; i++) {
-    const t: Target = {
-      pos: vec2(x, y),
-      color: colors.at(Math.floor(Math.random() * colors.length))!,
-      alive: true,
-      size
-    };
+      result.push({
+        pos: vec2(x, y),
+        alive: true,
+        color,
+        size
+      });
 
-    console.assert(t.color != undefined, "Generated index is out of range");
+      x += size.x + xpad;
+    }
 
-    result.push(t);
-
-    x += size.x + 5;
-  }
-
-  x = pad;
-  y = 5 + size.y + pad;
-
-  rows = Math.floor(GAME_WIDTH / (size.x + pad * 2));
-
-  for (let i = 0; i <= rows; i++) {
-    const t: Target = {
-      pos: vec2(x, y),
-      color: colors.at(Math.floor(Math.random() * colors.length))!,
-      alive: true,
-      size
-    };
-
-    console.assert(t.color != undefined, "Generated index is out of range");
-
-    result.push(t);
-
-    x += size.x + 5;
-  }
-
-  x = size.x + pad * 2;
-  y = 5 + size.y * 2 + pad * 2;
-
-  rows = Math.floor(GAME_WIDTH / (size.x + pad * 2)) - 2;
-
-  for (let i = 0; i <= rows; i++) {
-    const t: Target = {
-      pos: vec2(x, y),
-      color: colors.at(Math.floor(Math.random() * colors.length))!,
-      alive: true,
-      size
-    };
-
-    console.assert(t.color != undefined, "Generated index is out of range");
-
-    result.push(t);
-
-    x += size.x + 5;
+    x = xpad;
+    y += ypad + size.y;
   }
 
   return result;
 }
 
 const bar: Bar = {
-  pos: vec2(GAME_WIDTH / 2 - BAR_WIDTH / 2, GAME_HEIGHT - BAR_HEIGHT * 2),
+  pos: vec2(GAME_WIDTH / 2 - BAR_WIDTH / 2, GAME_HEIGHT - BAR_HEIGHT),
   size: vec2(BAR_WIDTH, BAR_HEIGHT),
   color: "#000"
 };
@@ -144,6 +122,7 @@ let right = false;
 let bar_dx = 0;
 let bullet_dx = 1;
 let bullet_dy = -1;
+let bullet_oldpos = { ...bullet.pos };
 
 let prevTimestamp = 0;
 function gameLoop(timestamp: number) {
@@ -158,31 +137,58 @@ function gameLoop(timestamp: number) {
   if (left) bar_dx += -1;
   if (right) bar_dx += 1;
 
-  bar.pos.x += 250 * bar_dx * dt;
+  bar.pos.x += BAR_SPEED * bar_dx * dt;
 
   if (bar.pos.x + bar.size.x > GAME_WIDTH) {
     bar.pos.x = GAME_WIDTH - bar.size.x;
-  } else if (bar.pos.x < 0) {
+  }
+
+  if (bar.pos.x < 0) {
     bar.pos.x = 0;
   }
 
-  if (bullet.pos.x + bullet.size.x > GAME_WIDTH || bullet.pos.x < 0) {
+  if (bullet.pos.x + bullet.size.x > GAME_WIDTH) {
+    bullet.pos.x = GAME_WIDTH - bullet.size.x;
     bullet_dx *= -1;
   }
 
-  if (bullet.pos.y < 0 || bullet.pos.y + bullet.size.y > GAME_HEIGHT) {
+  if (bullet.pos.x < 0) {
+    bullet.pos.x = 0;
+    bullet_dx *= -1;
+  }
+
+  if (bullet.pos.y < 0) {
+    bullet.pos.y = 0;
     bullet_dy *= -1;
   }
 
-  if (overlaps(bullet, bar)) {
+  if (bullet.pos.y + bullet.size.y > GAME_HEIGHT) {
+    // @TODO(art): game over
+    console.log("GAME OVER");
     bullet_dy *= -1;
+  }
+
+  if (overlaps(bar, bullet)) {
+    if (bullet_oldpos.y + bullet.size.y < bar.pos.y && bullet.pos.y + bullet.size.y >= bar.pos.y) {
+      bullet_dy *= -1;
+    }
+
+    if (bullet_oldpos.y > bar.pos.y + bar.size.y && bullet.pos.y <= bar.pos.y + bar.size.y) {
+      bullet_dy *= -1;
+    }
+
+    if (bullet_oldpos.x + bullet.size.x < bar.pos.x && bullet.pos.x + bullet.size.x >= bar.pos.x) {
+      bullet_dx *= -1;
+    }
+
+    if (bullet_oldpos.x > bar.pos.x + bar.size.x && bullet.pos.x <= bar.pos.x + bar.size.x) {
+      bullet_dx *= -1;
+    }
+
     if (bar_dx !== 0) {
       bullet_dx = bar_dx;
     }
   }
-
-  bullet.pos.x += bullet_dx * 180 * dt;
-  bullet.pos.y += bullet_dy * 180 * dt;
 
   for (const t of targets) {
     if (t.alive) {
@@ -192,6 +198,10 @@ function gameLoop(timestamp: number) {
       }
     }
   }
+
+  bullet_oldpos = { ...bullet.pos };
+  bullet.pos.x += bullet_dx * BULLET_SPEED * dt;
+  bullet.pos.y += bullet_dy * BULLET_SPEED * dt;
 
   // Draw
   {
